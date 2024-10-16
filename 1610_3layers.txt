@@ -1,0 +1,56 @@
+def build_encoder(self): 
+    # Define the input for the encoder
+    input_voxel = Input(shape=self.voxel_shape)
+
+    # First Conv3D layer
+    x = Conv3D(128, kernel_size=4, strides=2, padding="same")(input_voxel)
+    x = BatchNormalization()(x)
+    x = ReLU()(x)
+
+    # Combined Conv3D layer (originally two separate layers)
+    x = Conv3D(512, kernel_size=4, strides=2, padding="same")(x)  # Merged two layers
+    x = BatchNormalization()(x)
+    x = ReLU()(x)
+
+    # Flatten the output and add a dense layer for encoding
+    x = Flatten()(x) 
+
+    # New dense layer
+    x = Dense(1024)(x)  # Additional dense layer
+    x = ReLU()(x)
+
+    # Output to latent space
+    encoded = Dense(self.latent_dim)(x)  
+
+    # Create the encoder model
+    return Model(inputs=input_voxel, outputs=encoded)
+ def build_decoder(self):
+    # Define the input for the decoder
+    input_latent = Input(shape=(self.latent_dim,))
+
+    # New dense layer to mirror the encoder
+    x = Dense(1024)(input_latent)  
+    x = ReLU()(x)
+
+    # Dense layer and reshape
+    x = Dense(4 * 4 * 4 * 512)(x)  # Match the shape needed for Reshape
+    x = ReLU()(x)
+
+    x = Reshape((4, 4, 4, 512))(x)
+
+    # First Conv3DTranspose layer
+    x = Conv3DTranspose(256, kernel_size=4, strides=2, padding="same")(x)
+    x = BatchNormalization()(x)
+    x = ReLU()(x)
+
+    # Second Conv3DTranspose layer
+    x = Conv3DTranspose(128, kernel_size=4, strides=2, padding="same")(x)
+    x = BatchNormalization()(x)
+    x = ReLU()(x)
+
+    # Output layer with Conv3DTranspose
+    output_voxel = Conv3DTranspose(1, kernel_size=4, strides=2, padding="same")(x)
+    output_voxel = Activation("tanh")(output_voxel)
+
+    # Create the decoder model
+    return Model(inputs=input_latent, outputs=output_voxel)
